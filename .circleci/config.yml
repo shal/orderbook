@@ -1,0 +1,73 @@
+version: 2
+
+jobs:
+  test:
+    docker:
+      - image: circleci/golang:1.14
+        environment:
+          GO111MODULE: "on"
+    working_directory: /go/src/github.com/shal/orderbook
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+
+      - run:
+          name: "Install Dependencies"
+          command: "go mod download"
+
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+
+      - run:
+          name: "Run Tests"
+          command: "go test -v -bench=. -race ./..."
+
+      - run:
+          name: "Lint Code"
+          command: |
+            wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.27.0
+            ./bin/golangci-lint run
+
+  release:
+    docker:
+      - image: circleci/golang:1.14
+        environment:
+          GO111MODULE: "off"
+          USER_NAME: "Ali Shanaakh"
+          USER_EMAIL: "github@shal.dev"
+    steps:
+      - checkout
+
+      - run:
+          name: "Set Git Configuration"
+          command: |
+            git config --global user.name "${USER_NAME}"
+            git config --global user.email "${USER_EMAIL}"
+
+      - run:
+          name: "Bump Version"
+          command: |
+            go get github.com/Clever/gitsem
+            gitsem -m "[ci skip] Bump version to %s" patch
+
+      - run:
+          name: "Release Version"
+          command: |
+            git remote add authenticated-origin https://${GITHUB_USER}:${GITHUB_API_KEY}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+            git push --tags authenticated-origin HEAD:${CIRCLE_BRANCH}
+
+workflows:
+  version: 2
+  test-relase-build:
+    jobs:
+      - test
+      - release:
+          requires:
+            - test
+          filters:
+            branches:
+              only: master

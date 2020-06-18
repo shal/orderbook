@@ -27,6 +27,7 @@ const (
 	KindLimit Kind = "limit"
 )
 
+// Order is simple representation of order for matching engine.
 type Order struct {
 	ID       uint64          `json:"id"`
 	Side     Side            `json:"side"`
@@ -37,6 +38,7 @@ type Order struct {
 	Received decimal.Decimal `json:"received"`
 }
 
+// Trade is result of two matched orders.
 type Trade struct {
 	Buy    Order           `json:"buy"`
 	Sell   Order           `json:"sell"`
@@ -44,6 +46,7 @@ type Trade struct {
 	Price  decimal.Decimal `json:"price"`
 }
 
+// NewTrade creates new trade.
 func NewTrade(buy, sell *Order, amount, price decimal.Decimal) *Trade {
 	return &Trade{
 		Buy:    *buy,
